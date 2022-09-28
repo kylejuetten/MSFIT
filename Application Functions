@@ -1,0 +1,776 @@
+def user_ions(activation):
+
+            # Define ion types according to activation method
+            HCD = ['b', 'y']
+            ETD = ['c', 'z']
+            EThcD = ['b', 'c', 'y', 'z']
+            UVPD = ['a', 'a+1', 'b', 'c', 'x', 'x+1', 'y', 'y-1', 'y-2', 'z']
+
+            ion_types = []
+
+            # Assign ion types for search
+            if activation == 'HCD' or activation == 'CID':
+                ion_types = HCD
+
+            if activation == 'ETD':
+                ion_types = ETD
+
+            if activation == 'ETHCD':
+                ion_types = EThcD
+
+            if activation == 'UVPD':
+                ion_types = UVPD
+
+            return ion_types
+
+        def user_TIC(tic2):
+
+            # Control if no value is entered for TIC
+            if tic2 == '':
+                tic2 = '1'
+
+            if tic2 == '0':
+                tic2 = '1'
+
+            return int(tic2)
+
+        def user_PTMs(x, y):
+
+            # Control if no values are entered for PTM position/mass
+
+            if x == '':
+                x = [0]
+
+            else:
+                x = [int(x) for x in x.split(',')]
+
+            if y == '':
+                y = [0]
+
+            else:
+                y = [float(x) for x in y.split(',')]
+
+            PTM_dict = {x[i]: y[i] for i in range(len(x))}
+
+            return (PTM_dict)
+
+        def user_Ligand(x):
+
+            if x == '':
+                x = [0]
+
+            else:
+                x = [float(x) for x in x.split(',')]
+
+            return (x)
+
+        def theoretical_mass(seq, ptm_dict, Ligand_mass):
+
+            # Define amino acid monoisotopic masses
+            AA_masses = {"A": 71.03711, "C": 103.00919, "D": 115.02694, "E": 129.04259,
+                         "F": 147.06841, "G": 57.02146, "H": 137.05891, "I": 113.08406,
+                         "K": 128.09496, "L": 113.08406, "M": 131.04049, "N": 114.04293,
+                         "P": 97.05276, "Q": 128.05858, "R": 156.10111, "S": 87.03203,
+                         "T": 101.04768, "V": 99.06841, "W": 186.07931, "Y": 163.06333}
+
+            # Split protein sequence into list
+            protein_aa_list = [aa for aa in protein_sequence]
+
+            protein_monoisotopic_mass = 0
+
+            # Sum protein monoisotopic mass
+            for i in protein_aa_list:
+                if i in AA_masses:
+                    protein_monoisotopic_mass += AA_masses[i]
+
+            # Correct mass according to PTM's
+            for value in ptm_dict.values():
+                protein_monoisotopic_mass += value
+
+            # Correct mass according to Ligands
+            for i in Ligand_mass:
+                protein_monoisotopic_mass += i
+
+            # Correct mass for N/C term
+            protein_monoisotopic_mass += 18.01
+
+            return round(protein_monoisotopic_mass, 2)
+
+        def theoretical_fragment_calc(seq, ptm_dict, Ligand_mass):
+
+            # Define amino acid monoisotopic masses
+            AA_masses = {"A": 71.03711, "C": 103.00919, "D": 115.02694, "E": 129.04259,
+                         "F": 147.06841, "G": 57.02146, "H": 137.05891, "I": 113.08406,
+                         "K": 128.09496, "L": 113.08406, "M": 131.04049, "N": 114.04293,
+                         "P": 97.05276, "Q": 128.05858, "R": 156.10111, "S": 87.03203,
+                         "T": 101.04768, "V": 99.06841, "W": 186.07931, "Y": 163.06333}
+
+            # Split sequence into list
+            protein_aa_list = [aa for aa in protein_sequence]
+
+            mass_list = []
+
+            for i in protein_aa_list:
+                if i in AA_masses:
+                    mass_list.append(AA_masses[i])
+
+            # Add PTM's to corresponding position on sequence
+            for index, value in enumerate(mass_list):
+                for k, v in ptm_dict.items():
+                    if index == (k-1):
+                        mass_list[index] += v
+
+            # Dictionary of lists for theoretical fragments
+            fragment_dict = {'a': [], 'a+1': [], 'b': [], 'c': [],
+                'x': [], 'x+1': [], 'y': [], 'y-1': [], 'y-2': [], 'z': []}
+
+            # N-Term fragment list
+            fragment_mass = 0
+            N_term_fragment_list = []
+
+            for index, value in enumerate(mass_list):
+                N_term_fragment_list.append(fragment_mass)
+                fragment_mass += mass_list[index]
+
+            # C-Term fragment list
+            fragment_mass = 0
+            C_term_fragment_list = []
+
+            for index, value in reversed(list(enumerate(mass_list))):
+                C_term_fragment_list.append(fragment_mass)
+                fragment_mass += mass_list[index]
+
+            # Correct N-Term fragments according to fragment type
+            for i in N_term_fragment_list:
+                fragment_dict['a'].append(i-27.9949)
+                fragment_dict['a+1'].append(i-26.987075)
+                fragment_dict['b'].append(i)
+                fragment_dict['c'].append(i+17.026549)
+
+            # Correct C-Term fragments according to fragment type
+            for i in C_term_fragment_list:
+                fragment_dict['x'].append(i+43.989830)
+                fragment_dict['x+1'].append(i+44.997655)
+                fragment_dict['y'].append(i+18.010565)
+                fragment_dict['y-1'].append(i+17.00274)
+                fragment_dict['y-2'].append(i+15.994915)
+                fragment_dict['z'].append(i+1.991841)
+
+            # Dictionary of lists for theoretical fragments with ligand
+            ligand_fragment_dict = {'a': [], 'a+1': [], 'b': [], 'c': [],
+                'x': [], 'x+1': [], 'y': [], 'y-1': [], 'y-2': [], 'z': []}
+
+            # N-Term fragment list
+            fragment_mass = 0
+            ligand_N_term_fragment_list = []
+
+            for index, value in enumerate(mass_list):
+                ligand_N_term_fragment_list.append(fragment_mass)
+                fragment_mass += mass_list[index]
+
+            # C-Term fragment list
+            fragment_mass = 0
+            ligand_C_term_fragment_list = []
+
+            for index, value in reversed(list(enumerate(mass_list))):
+                ligand_C_term_fragment_list.append(fragment_mass)
+                fragment_mass += mass_list[index]
+
+            # Correct for Ligand mass
+            for i in ligand_N_term_fragment_list:
+                for j in Ligand_mass:
+                    ligand_fragment_dict['a'].append(i-27.9949 + j)
+                    ligand_fragment_dict['a+1'].append(i-26.987075 + j)
+                    ligand_fragment_dict['b'].append(i + j)
+                    ligand_fragment_dict['c'].append(i+17.026549 + j)
+
+            for i in ligand_C_term_fragment_list:
+                for j in Ligand_mass:
+                    ligand_fragment_dict['x'].append(i+43.989830 + j)
+                    ligand_fragment_dict['x+1'].append(i+44.997655 + j)
+                    ligand_fragment_dict['y'].append(i+18.010565 + j)
+                    ligand_fragment_dict['y-1'].append(i+17.00274 + j)
+                    ligand_fragment_dict['y-2'].append(i+15.994915 + j)
+                    ligand_fragment_dict['z'].append(i+1.991841 + j)
+
+            return (fragment_dict, ligand_fragment_dict)
+
+        def ppm_difference(observed, theoretical):
+
+            # Calculate ppm difference
+            ppm_difference = (((observed-theoretical)/theoretical)*1000000)
+            ppm_difference = round(ppm_difference, 2)
+
+            return (ppm_difference)
+
+        def match_fragments(deconvoluted_masses, theoretical_fragments, ion_types, tic):
+
+            # Dictionary of lists for relevant data
+            fragment_matches = {'ion type': [], 'position': [], 'Raw Intensity': [], 'TIC adjusted': [
+                ], 'Observed mass': [], 'Theoretical mass': [], 'ppm error': [], 'ref position': [], 'N/C-term': []}
+            k = 0
+
+            # Iterrate through deconvoluted mass list
+            for i in deconvoluted_masses.itertuples():
+                # Iterrate through theoretical fragments
+                for key, value in theoretical_fragments.items():
+                    for j in value:
+                        # Ignore first theoretical fragment (i.e. values less than mass of amino acid)
+                        if j > 0:
+                            # Match fragments according to activation method
+                            if key in ion_types:
+                                # Match fragments according to user entered PPM error
+                                if abs(ppm_difference(i.Mass, j)) <= int(PPM_error):
+                                    fragment_matches['Observed mass'].append(
+                                        i.Mass)
+                                    fragment_matches['ion type'].append(key)
+                                    fragment_matches['position'].append(
+                                        theoretical_fragments[key].index(j))
+                                    fragment_matches['ppm error'].append(
+                                        ppm_difference(i.Mass, j))
+                                    fragment_matches['Theoretical mass'].append(
+                                        j)
+                                    fragment_matches['Raw Intensity'].append(
+                                        i.Intensity)
+                                    fragment_matches['TIC adjusted'].append(
+                                        (i.Intensity)/tic)
+                                    # Create reference position for graphing
+                                    if fragment_matches['ion type'][k] == 'y' or fragment_matches['ion type'][k] == 'y-1' or fragment_matches['ion type'][k] == 'y-2' \
+                                            or fragment_matches['ion type'][k] == 'x' or fragment_matches['ion type'][k] == 'x+1' or fragment_matches['ion type'][k] == 'z':
+                                        fragment_matches['ref position'].append(
+                                            len(protein_sequence)-theoretical_fragments[key].index(j))
+                                    else:
+                                        fragment_matches['ref position'].append(
+                                            theoretical_fragments[key].index(j))
+                                    # Assign N or C terminal fragment type for graphing
+                                    if key == 'a' or key == 'a+1' or key == 'b' or key == 'c':
+                                        fragment_matches['N/C-term'].append(
+                                            'N-terminal')
+                                    else:
+                                        fragment_matches['N/C-term'].append(
+                                            'C-terminal')
+                                    k += 1
+
+            return (fragment_matches)
+
+        def find_seq_coverage(df, seq):
+
+            # Calculate sequence coverage
+            unique = df['Relative Ion Number'].nunique()
+            seq_coverage = (unique/(len(seq)-1)*100)
+
+            return round(seq_coverage)
+
+        def fragments_explained(matching_fragments, deconvoluted_masses):
+
+            # Calculate Fragments Explained
+            frags_explained = (len(matching_fragments) /
+                               len(deconvoluted_masses))*100
+
+            return round(frags_explained)
+
+        def fragment_abundance_plot(df, protein_sequence):
+
+            fig = px.bar(df, x='ref position', y='TIC adjusted Intensity', color='ion type',
+
+                     category_orders={'ion type': [
+                         'a', 'a+1', 'b', 'c', 'x', 'x+1', 'y', 'y-1', 'y-2', 'z']},
+
+                         hover_data={'ion type': True, 'position': True,
+                             'ref position': False, 'TIC adjusted Intensity': True},
+
+                         color_discrete_map={'a': '#750D86', 'a+1': '#750D86',
+                                         'b': '#0000FF',
+                                         'c': '#008000',
+                                         'x': 'rgb(231,41,138)', 'x+1': 'rgb(231,41,138)',
+                                         'y': '#D62728', 'y-1': '#D62728', 'y-2': '#D62728',
+                                         'z': '#FF7F0E'},
+
+                         labels={'TIC adjusted Intensity': 'TIC Adjusted Intensity', 'ref position': 'Backbone Position'})
+
+            # Format Plot
+            fig.update_xaxes(showline=True, linewidth=2, linecolor='black',
+                             mirror=True, title_font=dict(size=25), tickfont=dict(size=25))
+            fig.update_xaxes(range=[0, len(protein_sequence)])
+            fig.update_yaxes(showline=True, linewidth=2, linecolor='black',
+                             mirror=True, title_font=dict(size=25), tickfont=dict(size=25))
+            fig.update_layout(title_font_family='Arial', title_x=0.5, title_font=dict(
+                size=22), legend_font=dict(size=25))
+            fig.update_layout(template='seaborn')
+            fig.update_traces(marker=dict(
+                pattern_solidity=0.4, pattern_fgcolor='black'))
+            newnames = {'a': 'a', 'a+1': 'a+1         ', 'b': 'b', 'c': 'c',
+                'x': 'x', 'x+1': 'x+1', 'y': 'y', 'y-1': 'y-1', 'y-2': 'y-2', 'z': 'z'}
+            fig.for_each_trace(lambda t: t.update(name=newnames[t.name]))
+            fig.data = fig.data[::-1]
+            fig.layout.legend.traceorder = 'reversed'
+
+            return fig
+
+        def fragment_abundance_plot_NC_term(df, protein_sequence):
+
+            fig = px.bar(df, x='ref position', y='TIC adjusted Intensity', color='N/C-term',
+
+                         category_orders={'': ['N-terminal', 'C-terminal']},
+
+                         hover_data={
+                             'position': True, 'ref position': False, 'TIC adjusted Intensity': True},
+
+                         color_discrete_map={'N-terminal': '#008B8B',
+                                             'C-terminal': '#CD853F'},
+
+                         labels={'TIC adjusted Intensity': 'TIC Adjusted Intensity', 'ref position': 'Backbone Position'})
+
+            # Format Plot
+            fig.update_xaxes(showline=True, linewidth=2, linecolor='black',
+                             mirror=True, title_font=dict(size=25), tickfont=dict(size=25))
+            fig.update_xaxes(range=[0, len(protein_sequence)])
+            fig.update_yaxes(showline=True, linewidth=2, linecolor='black',
+                             mirror=True, title_font=dict(size=25), tickfont=dict(size=25))
+            fig.update_layout(title_font_family='Arial', title_x=0.5, title_font=dict(
+                size=22), legend_font=dict(size=25))
+            fig.update_layout(template='seaborn')
+            fig.update_traces(marker=dict(
+                pattern_solidity=0.4, pattern_fgcolor='black'))
+
+            fig.data = fig.data[::-1]
+            fig.layout.legend.traceorder = 'reversed'
+
+            return fig
+
+        def get_results(seq_coverage, frags_explained, protein_monoisotopic_mass, seq_len):
+
+            # Print monoisotopic mass, sequence coverage, fragments explained, sequence length
+            Results = 'Results \n \n Protein Mass: ' + str(protein_monoisotopic_mass) + \
+                '\t Sequence Length: ' + str(seq_len) + ' A.A.' + \
+                                                        '\t Sequence Coverage: ' + str(seq_coverage) + '%' + \
+                '\t Fragments Explained: ' + str(frags_explained) + '% \n'
+
+            return Results
+
+        def sequence_coverage_plot(protein_sequence, matching_fragments):
+
+            protein_aa_list = [aa for aa in protein_sequence]
+
+            y = [i for i in range(math.ceil(len(protein_aa_list)/25))]
+            y.reverse()
+            y_list = []
+            for i in y:
+                for j in range(25):
+                    y_list.append(i)
+            x_list = [(i+1) for i in range(25)] * \
+                (math.ceil(len(protein_aa_list)/25))
+            aa_number = [(i+1) for i in range(len(protein_sequence))]
+
+            coordinates = pd.DataFrame()
+            coordinates['protein'] = protein_aa_list
+            coordinates['x'] = x_list[0:len(protein_aa_list)]
+            coordinates['y'] = y_list[0:len(protein_aa_list)]
+
+            fig = go.Figure()
+
+            fig.add_trace(go.Scatter(
+                x=x_list,
+                y=y_list,
+                mode="text",
+                text=protein_aa_list,
+                textposition="bottom center",
+                name='ion type',
+                hovertext=aa_number,
+                hoverinfo='text',
+                hovertemplate='%{hovertext}'))
+
+        ###############################################################################
+
+            ap1 = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            a = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            b = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            c = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            x = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            xp1 = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            y = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            ym1 = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            ym2 = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+            z = {'ion type': [], 'ion mass': [], 'backbone position': [],
+                'ion location x': [], 'ion location y': []}
+
+            for row in matching_fragments.itertuples():
+
+                for i in coordinates.itertuples():
+
+                    if row._1 == 'a+1':
+
+                        if (i.Index+1) == row._8:
+
+                            ap1['ion type'].append(row._1), ap1['ion mass'].append(
+                                row._5), ap1['backbone position'].append(row._8)
+                            ap1['ion location x'].append(
+                                coordinates['x'][i.Index]+0.4)
+                            ap1['ion location y'].append(
+                                coordinates['y'][i.Index]+0.08)
+
+                    if row._1 == 'a':
+
+                        if (i.Index+1) == row._8:
+
+                            a['ion type'].append(row._1), a['ion mass'].append(
+                                row._5), a['backbone position'].append(row._8)
+                            a['ion location x'].append(
+                                coordinates['x'][i.Index]+0.4)
+                            a['ion location y'].append(
+                                coordinates['y'][i.Index]+0.06)
+
+                    if row._1 == 'b':
+
+                        if (i.Index+1) == row._8:
+
+                            b['ion type'].append(row._1), b['ion mass'].append(
+                                row._5), b['backbone position'].append(row._8)
+                            b['ion location x'].append(
+                                coordinates['x'][i.Index]+0.4)
+                            b['ion location y'].append(
+                                coordinates['y'][i.Index]+0.04)
+
+                    if row._1 == 'c':
+
+                        if (i.Index+1) == row._8:
+
+                            c['ion type'].append(row._1), c['ion mass'].append(
+                                row._5), c['backbone position'].append(row._8)
+                            c['ion location x'].append(
+                                coordinates['x'][i.Index]+0.4)
+                            c['ion location y'].append(
+                                coordinates['y'][i.Index]+0.02)
+
+                    if row._1 == 'x':
+
+                        if (i.Index+1) == row._8:
+
+                            x['ion type'].append(row._1), x['ion mass'].append(
+                                row._5), x['backbone position'].append(row.position)
+                            x['ion location x'].append(
+                                coordinates['x'][i.Index]+0.6)
+                            x['ion location y'].append(
+                                coordinates['y'][i.Index]-0.12)
+
+                    if row._1 == 'x+1':
+
+                        if (i.Index+1) == row._8:
+
+                            xp1['ion type'].append(row._1), xp1['ion mass'].append(
+                                row._5), xp1['backbone position'].append(row.position)
+                            xp1['ion location x'].append(
+                                coordinates['x'][i.Index]+0.6)
+                            xp1['ion location y'].append(
+                                coordinates['y'][i.Index]-0.14)
+
+                    if row._1 == 'y':
+
+                        if (i.Index+1) == row._8:
+
+                            y['ion type'].append(row._1), y['ion mass'].append(
+                                row._5), y['backbone position'].append(row.position)
+                            y['ion location x'].append(
+                                coordinates['x'][i.Index]+0.6)
+                            y['ion location y'].append(
+                                coordinates['y'][i.Index]-0.16)
+
+                    if row._1 == 'y-1':
+
+                        if (i.Index+1) == row._8:
+
+                            ym1['ion type'].append(row._1), ym1['ion mass'].append(
+                                row._5), ym1['backbone position'].append(row.position)
+                            ym1['ion location x'].append(
+                                coordinates['x'][i.Index]+0.6)
+                            ym1['ion location y'].append(
+                                coordinates['y'][i.Index]-0.18)
+
+                    if row._1 == 'y-2':
+
+                        if (i.Index+1) == row._8:
+
+                            ym2['ion type'].append(row._1), ym2['ion mass'].append(
+                                row._5), ym2['backbone position'].append(row.position)
+                            ym2['ion location x'].append(
+                                coordinates['x'][i.Index]+0.6)
+                            ym2['ion location y'].append(
+                                coordinates['y'][i.Index]-0.2)
+
+                    if row._1 == 'z':
+
+                        if (i.Index+1) == row._8:
+
+                            z['ion type'].append(row._1), z['ion mass'].append(
+                                row._5), z['backbone position'].append(row.position)
+                            z['ion location x'].append(
+                                coordinates['x'][i.Index]+0.6)
+                            z['ion location y'].append(
+                                coordinates['y'][i.Index]-0.22)
+
+            ###############################################################################
+
+            df_ap1 = pd.DataFrame()
+            df_a = pd.DataFrame()
+            df_b = pd.DataFrame()
+            df_c = pd.DataFrame()
+            df_x = pd.DataFrame()
+            df_xp1 = pd.DataFrame()
+            df_y = pd.DataFrame()
+            df_ym1 = pd.DataFrame()
+            df_ym2 = pd.DataFrame()
+            df_z = pd.DataFrame()
+
+            df_ap1['ion type'], df_ap1['ion position'], df_ap1['ion mass'] = ap1['ion type'], ap1['backbone position'], ap1['ion mass']
+            df_a['ion type'], df_a['ion position'], df_a['ion mass'] = a['ion type'], a['backbone position'], a['ion mass']
+            df_b['ion type'], df_b['ion position'], df_b['ion mass'] = b['ion type'], b['backbone position'], b['ion mass']
+            df_c['ion type'], df_c['ion position'], df_c['ion mass'] = c['ion type'], c['backbone position'], c['ion mass']
+            df_x['ion type'], df_x['ion position'], df_x['ion mass'] = x['ion type'], x['backbone position'], x['ion mass']
+            df_xp1['ion type'], df_xp1['ion position'], df_xp1['ion mass'] = xp1['ion type'], xp1['backbone position'], xp1['ion mass']
+            df_y['ion type'], df_y['ion position'], df_y['ion mass'] = y['ion type'], y['backbone position'], y['ion mass']
+            df_ym1['ion type'], df_ym1['ion position'], df_ym1['ion mass'] = ym1['ion type'], ym1['backbone position'], ym1['ion mass']
+            df_ym2['ion type'], df_ym2['ion position'], df_ym2['ion mass'] = ym2['ion type'], ym2['backbone position'], ym2['ion mass']
+            df_z['ion type'], df_z['ion position'], df_z['ion mass'] = z['ion type'], z['backbone position'], z['ion mass']
+
+            ###############################################################################
+
+            fig.add_trace(go.Scatter(
+                x=ap1['ion location x'],
+                y=ap1['ion location y'],
+                mode='markers',
+                name='a+1',
+                marker_color='#008000',
+                marker_symbol='triangle-ne',
+                marker_size=15,
+                customdata=np.stack(
+                    (df_ap1['ion type'], df_ap1['ion position'], df_ap1['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(ap1['ion type'][i], ap1['backbone position'][i],
+                            ap1['ion mass'][i]) for i in range(len(ap1['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=a['ion location x'],
+                y=a['ion location y'],
+                mode='markers',
+                name='a',
+                marker_color='#008000',
+                marker_symbol='triangle-ne',
+                marker_size=15,
+                customdata=np.stack(
+                    (df_a['ion type'], df_a['ion position'], df_a['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(a['ion type'][i], a['backbone position'][i],
+                            a['ion mass'][i]) for i in range(len(a['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=b['ion location x'],
+                y=b['ion location y'],
+                mode='markers',
+                marker_color='#0000FF',
+                marker_symbol='triangle-ne',
+                marker_size=15,
+                name='b',
+                customdata=np.stack(
+                    (df_b['ion type'], df_b['ion position'], df_b['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(b['ion type'][i], b['backbone position'][i],
+                            b['ion mass'][i]) for i in range(len(b['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=c['ion location x'],
+                y=c['ion location y'],
+                mode='markers',
+                marker_color='#FF0000',
+                marker_symbol='triangle-ne',
+                marker_size=15,
+                name='c',
+                customdata=np.stack(
+                    (df_c['ion type'], df_c['ion position'], df_c['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(c['ion type'][i], c['backbone position'][i],
+                            c['ion mass'][i]) for i in range(len(c['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=x['ion location x'],
+                y=x['ion location y'],
+                mode='markers',
+                marker_color='#008000',
+                marker_symbol='triangle-sw',
+                marker_size=15,
+                name='x',
+                customdata=np.stack(
+                    (df_x['ion type'], df_x['ion position'], df_x['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(x['ion type'][i], x['backbone position'][i],
+                            x['ion mass'][i]) for i in range(len(x['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=xp1['ion location x'],
+                y=xp1['ion location y'],
+                mode='markers',
+                marker_color='#008000',
+                marker_symbol='triangle-sw',
+                marker_size=15,
+                name='x + 1',
+                customdata=np.stack(
+                    (df_xp1['ion type'], df_xp1['ion position'], df_xp1['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(xp1['ion type'][i], xp1['backbone position'][i],
+                            xp1['ion mass'][i]) for i in range(len(xp1['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=y['ion location x'],
+                y=y['ion location y'],
+                mode='markers',
+                marker_color='#0000FF',
+                marker_symbol='triangle-sw',
+                marker_size=15,
+                name='y',
+                customdata=np.stack(
+                    (df_y['ion type'], df_y['ion position'], df_y['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(y['ion type'][i], y['backbone position'][i],
+                            y['ion mass'][i]) for i in range(len(y['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=ym1['ion location x'],
+                y=ym1['ion location y'],
+                mode='markers',
+                marker_color='#0000FF',
+                marker_symbol='triangle-sw',
+                marker_size=15,
+                name='y - 1',
+                customdata=np.stack(
+                    (df_ym1['ion type'], df_ym1['ion position'], df_ym1['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(ym1['ion type'][i], ym1['backbone position'][i],
+                            ym1['ion mass'][i]) for i in range(len(ym1['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=ym2['ion location x'],
+                y=ym2['ion location y'],
+                mode='markers',
+                marker_color='#0000FF',
+                marker_symbol='triangle-sw',
+                marker_size=15,
+                name='y - 2',
+                customdata=np.stack(
+                    (df_ym2['ion type'], df_ym2['ion position'], df_ym2['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(ym2['ion type'][i], ym2['backbone position'][i],
+                            ym2['ion mass'][i]) for i in range(len(ym2['ion type']))],
+                hoverinfo='text'))
+
+            fig.add_trace(go.Scatter(
+                x=z['ion location x'],
+                y=z['ion location y'],
+                mode='markers',
+                marker_color='#FF0000',
+                marker_symbol='triangle-sw',
+                marker_size=15,
+                name='z',
+                customdata=np.stack(
+                    (df_z['ion type'], df_z['ion position'], df_z['ion mass']), axis=-1),
+                hovertemplate=('Ion Type: %{customdata[0]}<br>' +
+                               'Ion Number: %{customdata[1]}<br>' +
+                               'Ion Mass: %{customdata[2]}<br><extra></extra>'),
+                hovertext=[(z['ion type'][i], z['backbone position'][i],
+                            z['ion mass'][i]) for i in range(len(z['ion type']))],
+                hoverinfo='text'))
+
+        ###############################################################################
+
+            fig.update_layout(template='simple_white',
+                              legend_font=dict(size=25))
+            fig.update_traces(textfont_size=40)
+            fig.update_xaxes(ticks='', showticklabels=False, showline=False)
+            fig.update_yaxes(ticks='', showticklabels=False, showline=False)
+
+            return fig
+
+        def get_variables():
+
+            seq = seq_entry.get("1.0", "end-1c")
+            tic2 = tic_var.get()
+            activation = menu.get().upper()
+            PTM_position = PTM_position_var.get()
+            PTM_mass = PTM_mass_var.get()
+            Ligand_mass = ligand_mass_var.get()
+            Apo_Holo_menu = holo_menu.get()
+            global PPM_error
+            PPM_error = PPM_var.get()
+
+            return seq, tic2, activation, PTM_position, PTM_mass, Ligand_mass, Apo_Holo_menu, PPM_error
+
+        def file_read(file):
+            with file as f:
+                for l in f:
+                    if l.startswith("Mass"):
+                        columns = l.split(',')
+                        new_columns = []
+                        for x in columns:
+                             new_columns.append(x.strip())
+                        break
+                deconvoluted_masses = pd.read_csv(
+                    file, float_precision=None, names=new_columns)
+            deconvoluted_masses = deconvoluted_masses.sort_values(
+                'Intensity', ascending=False).drop_duplicates('Mass').sort_index()
+
+            return deconvoluted_masses
+            
+            
+           def graph_all_ions():
+
+            # Fragment Abundance Plot with all ion types
+            frag_plot_fig = fragment_abundance_plot(
+                matching_fragments, protein_sequence)
+            plot(frag_plot_fig)
+
+        def graph_NC_terminal():
+
+            # Fragment Abundance Plot with only N/C terminal
+            NC_plot_fig = fragment_abundance_plot_NC_term(
+                matching_fragments, protein_sequence)
+            plot(NC_plot_fig)
+
+        def graph_seq_coverage():
+
+            # Sequence Coverage Plot
+            seq_fig = sequence_coverage_plot(
+                protein_sequence, matching_fragments)
+            plot(seq_fig)
